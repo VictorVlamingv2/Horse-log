@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horse Log MVP (Vanilla JS)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .selected-horse-card { border-left: 4px solid #3b82f6; } /* Blue-500 */
+        .tab-button, .sub-tab-button {
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+            border: 1px solid transparent;
+            border-bottom: none;
+        }
+        .tab-button { border-radius: 0.375rem 0.375rem 0 0; }
+        .sub-tab-button { font-size: 0.875rem; padding: 0.375rem 0.75rem; border-radius: 0.25rem; margin-right: 0.5rem;}
+
+        .tab-button.active, .sub-tab-button.active {
+            background-color: white;
+            color: #3b82f6; /* blue-600 */
+            border-color: #e5e7eb; /* gray-200 */
+        }
+        .tab-button:not(.active), .sub-tab-button:not(.active) {
+            background-color: #f3f4f6; /* gray-100 */
+            color: #4b5563; /* gray-600 */
+        }
+        .tab-button:not(.active):hover, .sub-tab-button:not(.active):hover {
+            background-color: #e5e7eb; /* gray-200 */
+        }
+        .tab-content-area {
+            border: 1px solid #e5e7eb; /* gray-200 */
+            border-top: none;
+            border-radius: 0 0 0.375rem 0.375rem;
+        }
+        .sub-tab-content-area {
+            padding-top: 1rem;
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        .hidden { display: none !important; }
+        .chart-container {
+            margin-top: 1.5rem; /* 24px */
+            padding-top: 1rem; /* 16px */
+            border-top: 1px solid #e5e7eb; /* gray-200 */
+            min-height: 250px; /* Ensure space for chart or message */
+        }
+        .treatment-details {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed #cbd5e1; /* gray-300 */
+        }
+        .administer-dose-button {
+            background-color: #10b981; /* emerald-500 */
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+        .administer-dose-button:hover {
+            background-color: #059669; /* emerald-600 */
+        }
+        .treatment-complete {
+            color: #059669; /* emerald-600 */
+            font-weight: 500;
+        }
+        .exhaustion-warning {
+            color: #ef4444; /* red-500 */
+            background-color: #fee2e2; /* red-100 */
+            border: 1px solid #fca5a5; /* red-300 */
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            margin-top: 1rem;
+            text-align: center;
+            font-weight: 500;
+        }
+        .administration-dates-list {
+            list-style-type: disc;
+            margin-left: 1.5rem; 
+            font-size: 0.875rem; 
+            color: #4b5563; 
+            padding-left: 0.5rem; 
+        }
+         .administration-dates-list li {
+            background-color: #e0e7ff; 
+            color: #3730a3; 
+            padding: 0.25rem 0.5rem; 
+            border-radius: 9999px; 
+            margin-bottom: 0.25rem; 
+            display: inline-block; 
+            margin-right: 0.25rem; 
+        }
+        .birthday-banner {
+            background-color: #ecfdf5; 
+            color: #065f46; 
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            text-align: center;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            border: 1px solid #6ee7b7; 
+        }
+        .champion-label {
+            font-size: 0.75rem; /* text-xs */
+            color: #ca8a04; /* yellow-600 */
+            font-weight: 600; /* font-semibold */
+            margin-left: 0.5rem; /* ml-2 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 sm:p-6 md:p-8">
+    <div class="container mx-auto max-w-5xl bg-white rounded-xl shadow-2xl p-6 md:p-8">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">Horse Log MVP</h1>
+            <p class="text-gray-600 mt-2">Track profile, health, training, competition, and breeding events for your horses.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+            <div class="md:col-span-4 bg-gray-50 p-6 rounded-lg shadow">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">My Horses</h2>
+                <div class="mb-6">
+                    <label for="newHorseNameInput" class="block text-sm font-medium text-gray-700 mb-1">Add New Horse:</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="newHorseNameInput" placeholder="Enter horse name" class="flex-grow mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                        <button id="addHorseButton" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition duration-150 ease-in-out">
+                            Add
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-medium text-gray-700 mb-2">Select a Horse:</h3>
+                    <ul id="horseList" class="space-y-2 max-h-96 overflow-y-auto pr-2"></ul>
+                    <p id="noHorsesMessage" class="text-sm text-gray-500 hidden">No horses added yet.</p>
+                </div>
+            </div>
+
+            <div class="md:col-span-8 bg-gray-50 p-6 rounded-lg shadow">
+                <div id="selectedHorseSection" class="hidden">
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-1">Data for <span id="selectedHorseNameDisplay" class="text-blue-600"></span></h2>
+                    
+                    <div class="flex border-b border-gray-200 mb-0 -mx-6 px-6 pt-4">
+                        <button id="tabProfile" data-view="profile" class="tab-button">Profile</button>
+                        <button id="tabHealth" data-view="health" class="tab-button active">Health</button>
+                        <button id="tabTraining" data-view="training" class="tab-button">Training</button>
+                        <button id="tabCompetition" data-view="competition" class="tab-button">Competition</button>
+                        <button id="tabBreeding" data-view="breeding" class="tab-button">Breeding</button>
+                    </div>
+
+                    <div class="tab-content-area bg-white p-4 md:p-6 shadow-inner">
+                        <!-- Profile Section -->
+                        <div id="profileView" class="log-view-content hidden">
+                            <div class="flex mb-4 border-b pb-2">
+                                <button id="subTabProfileDetails" data-subview="details" class="sub-tab-button active">Details</button>
+                                <button id="subTabProfileLineage" data-subview="lineage" class="sub-tab-button">Lineage</button>
+                            </div>
+
+                            <div id="profileDetailsView" class="sub-tab-content-area">
+                                <h3 class="text-xl font-semibold text-gray-700 mb-4">Horse Details</h3>
+                                <div id="birthdayBanner" class="birthday-banner hidden">🎉 Happy Birthday! 🎉</div>
+                                <div class="space-y-4">
+                                    <div><label for="profileDobInput" class="block text-sm font-medium text-gray-700">Date of Birth:</label><input type="date" id="profileDobInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div><label for="profileBreedSelect" class="block text-sm font-medium text-gray-700">Breed:</label><select id="profileBreedSelect" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"><option value="">Select Breed</option><option value="Thoroughbred">Thoroughbred</option><option value="Quarter Horse">Quarter Horse</option><option value="Arabian">Arabian</option><option value="Warmblood">Warmblood</option><option value="Other">Other</option></select></div>
+                                        <div><label for="profileSexSelect" class="block text-sm font-medium text-gray-700">Sex:</label><select id="profileSexSelect" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"><option value="">Select Sex</option><option value="Mare">Mare</option><option value="Stallion">Stallion</option><option value="Gelding">Gelding</option></select></div>
+                                    </div>
+                                    <div><label for="profileHeightInput" class="block text-sm font-medium text-gray-700">Height (e.g., 15.2 hh or 157 cm):</label><input type="text" id="profileHeightInput" placeholder="e.g., 16.1 hh" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                    <button id="saveProfileDetailsButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md">Save Details</button>
+                                </div>
+                                <div class="mt-6 pt-4 border-t">
+                                    <h4 class="text-md font-medium text-gray-700 mb-2">Current Profile Information:</h4>
+                                    <p class="text-sm text-gray-600"><strong>Name:</strong> <span id="displayHorseName"></span></p>
+                                    <p class="text-sm text-gray-600"><strong>Breed:</strong> <span id="displayBreed">N/A</span></p>
+                                    <p class="text-sm text-gray-600"><strong>Sex:</strong> <span id="displaySex">N/A</span></p>
+                                    <p class="text-sm text-gray-600"><strong>DOB:</strong> <span id="displayDob">N/A</span></p>
+                                    <p class="text-sm text-gray-600"><strong>Age:</strong> <span id="displayAge">N/A</span></p>
+                                    <p class="text-sm text-gray-600"><strong>Height:</strong> <span id="displayHeight">N/A</span></p>
+                                </div>
+                            </div>
+
+                            <div id="profileLineageView" class="sub-tab-content-area hidden">
+                                <h3 class="text-xl font-semibold text-gray-700 mb-4">Lineage</h3>
+                                <div class="space-y-4">
+                                    <div><label for="profileSireNameInput" class="block text-sm font-medium text-gray-700">Sire (Father) Name:</label><input type="text" id="profileSireNameInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                    <div class="flex items-center"><input type="checkbox" id="profileSireChampionInput" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"><label for="profileSireChampionInput" class="ml-2 block text-sm text-gray-900">Sire was a Champion?</label></div>
+                                    <div class="mt-2"><label for="profileDamNameInput" class="block text-sm font-medium text-gray-700">Dam (Mother) Name:</label><input type="text" id="profileDamNameInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                    <div class="flex items-center"><input type="checkbox" id="profileDamChampionInput" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"><label for="profileDamChampionInput" class="ml-2 block text-sm text-gray-900">Dam was a Champion?</label></div>
+                                    <button id="saveProfileLineageButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md">Save Lineage</button>
+                                </div>
+                                <div class="mt-6 pt-4 border-t">
+                                    <h4 class="text-md font-medium text-gray-700 mb-2">Current Lineage Information:</h4>
+                                    <p class="text-sm text-gray-600"><strong>Sire:</strong> <span id="displaySireName">N/A</span><span id="displaySireChampion" class="champion-label hidden">(Champion)</span></p>
+                                    <p class="text-sm text-gray-600"><strong>Dam:</strong> <span id="displayDamName">N/A</span><span id="displayDamChampion" class="champion-label hidden">(Champion)</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Health Log Section -->
+                        <div id="healthLogView" class="log-view-content">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">Health Events</h3>
+                            <div class="space-y-3 mb-6 border-b pb-6">
+                                <div><label for="healthLogDateInput" class="block text-sm font-medium text-gray-700">Date (Treatment Start Date if applicable):</label><input type="date" id="healthLogDateInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="healthLogTypeInput" class="block text-sm font-medium text-gray-700">Event Type:</label><input type="text" id="healthLogTypeInput" placeholder="e.g., Vet, Farrier, Vaccine" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="healthLogNotesInput" class="block text-sm font-medium text-gray-700">Notes:</label><textarea id="healthLogNotesInput" rows="3" placeholder="Details about the event..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></textarea></div>
+                                <h4 class="text-md font-medium text-gray-600 pt-2">Treatment Details (Optional):</h4>
+                                <div><label for="healthMedicineNameInput" class="block text-sm font-medium text-gray-700">Medicine Name:</label><input type="text" id="healthMedicineNameInput" placeholder="e.g., Bute, Penicillin" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="healthDosageInput" class="block text-sm font-medium text-gray-700">Dosage Instructions:</label><input type="text" id="healthDosageInput" placeholder="e.g., 1 sachet AM/PM, 10ml twice daily" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="healthTreatmentDurationInput" class="block text-sm font-medium text-gray-700">Treatment Duration (days):</label><input type="number" id="healthTreatmentDurationInput" placeholder="e.g., 7" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <button id="addHealthLogButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md">Add Health Entry</button>
+                            </div>
+                            <h4 class="text-md font-medium text-gray-700 mb-2">Recorded Health Events:</h4>
+                            <ul id="healthLogList" class="space-y-3 max-h-96 overflow-y-auto pr-2"></ul>
+                            <p id="noHealthLogsMessage" class="text-sm text-gray-500 hidden">No health logs yet.</p>
+                        </div>
+
+                        <!-- Training Log Section -->
+                        <div id="trainingLogView" class="log-view-content hidden">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">Training Sessions</h3>
+                            <div class="space-y-3 mb-6">
+                                <div><label for="trainingLogDateInput" class="block text-sm font-medium text-gray-700">Date:</label><input type="date" id="trainingLogDateInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="trainingLogActivityInput" class="block text-sm font-medium text-gray-700">Activity:</label><input type="text" id="trainingLogActivityInput" placeholder="e.g., Flatwork, Jumping" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="trainingLogDurationInput" class="block text-sm font-medium text-gray-700">Duration (mins):</label><input type="number" id="trainingLogDurationInput" placeholder="e.g., 60" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="trainingLogNotesInput" class="block text-sm font-medium text-gray-700">Notes:</label><textarea id="trainingLogNotesInput" rows="3" placeholder="Details..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></textarea></div>
+                                <button id="addTrainingLogButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md">Add Training Entry</button>
+                            </div>
+                            <h4 class="text-md font-medium text-gray-700 mb-2">Recorded Training Sessions:</h4>
+                            <ul id="trainingLogList" class="space-y-2 max-h-72 overflow-y-auto pr-2"></ul>
+                            <p id="noTrainingLogsMessage" class="text-sm text-gray-500 hidden">No training logs yet.</p>
+                             <div class="chart-container">
+                                <canvas id="trainingChart"></canvas>
+                                <p id="noTrainingChartDataMessage" class="text-sm text-gray-500 text-center py-4 hidden">Not enough data to display chart.</p>
+                            </div>
+                            <div id="exhaustionWarningMessage" class="exhaustion-warning hidden mt-4"></div>
+                        </div>
+
+                        <!-- Competition Log Section -->
+                        <div id="competitionLogView" class="log-view-content hidden">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">Competition Results</h3>
+                            <div class="space-y-3 mb-6">
+                                <div><label for="compLogDateInput" class="block text-sm font-medium text-gray-700">Date:</label><input type="date" id="compLogDateInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="compLogEventInput" class="block text-sm font-medium text-gray-700">Event Name:</label><input type="text" id="compLogEventInput" placeholder="e.g., Summer Show Series" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="compLogClassInput" class="block text-sm font-medium text-gray-700">Class/Level:</label><input type="text" id="compLogClassInput" placeholder="e.g., Novice Dressage, 1.00m" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="compLogPlacingInput" class="block text-sm font-medium text-gray-700">Placing/Result:</label><input type="text" id="compLogPlacingInput" placeholder="e.g., 1st, Clear Round" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="compLogNotesInput" class="block text-sm font-medium text-gray-700">Notes:</label><textarea id="compLogNotesInput" rows="3" placeholder="Details..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></textarea></div>
+                                <button id="addCompetitionLogButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md">Add Competition Entry</button>
+                            </div>
+                            <h4 class="text-md font-medium text-gray-700 mb-2">Recorded Competition Results:</h4>
+                            <ul id="competitionLogList" class="space-y-2 max-h-72 overflow-y-auto pr-2"></ul>
+                            <p id="noCompetitionLogsMessage" class="text-sm text-gray-500 hidden">No competition logs yet.</p>
+                            <div class="chart-container">
+                                <canvas id="competitionChart"></canvas>
+                                <p id="noCompetitionChartDataMessage" class="text-sm text-gray-500 text-center py-4 hidden">Not enough data to display chart.</p>
+                            </div>
+                        </div>
+
+                        <!-- Breeding Log Section -->
+                        <div id="breedingLogView" class="log-view-content hidden">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">Breeding Records</h3>
+                            <div class="space-y-3 mb-6">
+                                <div><label for="breedingInseminationDateInput" class="block text-sm font-medium text-gray-700">Insemination Date:</label><input type="date" id="breedingInseminationDateInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="breedingStallionInput" class="block text-sm font-medium text-gray-700">Stallion Used:</label><input type="text" id="breedingStallionInput" placeholder="Stallion's Name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="breedingDueDateInput" class="block text-sm font-medium text-gray-700">Expected Due Date:</label><input type="date" id="breedingDueDateInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="breedingOffspringNameInput" class="block text-sm font-medium text-gray-700">Offspring Name (if born):</label><input type="text" id="breedingOffspringNameInput" placeholder="Foal's Name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                <div><label for="breedingNotesInput" class="block text-sm font-medium text-gray-700">Notes:</label><textarea id="breedingNotesInput" rows="3" placeholder="Breeding notes, observations..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></textarea></div>
+                                <button id="addBreedingLogButton" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-md">Add Breeding Record</button>
+                            </div>
+                            <h4 class="text-md font-medium text-gray-700 mb-2">Recorded Breeding Activity:</h4>
+                            <ul id="breedingLogList" class="space-y-2 max-h-72 overflow-y-auto pr-2"></ul>
+                            <p id="noBreedingLogsMessage" class="text-sm text-gray-500 hidden">No breeding records for this horse yet.</p>
+                        </div>
+
+                    </div>
+                </div>
+                <div id="noSelectedHorseMessage" class="text-center py-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5.5A2.5 2.5 0 0112 3v2.5m0 0V3m0 2.5A2.5 2.5 0 0014.5 8H10M10 6H5M15 11H9m3 0V5.5m0 5.5V17m0-5.5H9m6 0h.01M12 6.5a.5.5 0 11-1 0 .5.5 0 011 0zM9.5 14.5A.5.5 0 019 14V8a.5.5 0 01.5-.5h5a.5.5 0 01.5.5v6a.5.5 0 01-.5.5h-5z" />
+                    </svg>
+                    <p class="mt-3 text-lg font-medium text-gray-500">Select a horse to view logs.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-10 text-center text-sm text-gray-500">
+            <p>&copy; <span id="currentYear"></span> Horse Log MVP. For demonstration purposes.</p>
+        </footer>
+    </div>
+
+<script type="module">
+document.addEventListener('DOMContentLoaded', () => {
+    // State variables
+    let horses = [];
+    let healthLogs = [];
+    let trainingLogs = [];
+    let competitionLogs = [];
+    let breedingLogs = []; // New state for breeding logs
+    let selectedHorseId = null;
+    let currentLogView = 'profile'; // Default to profile view
+    let currentProfileSubView = 'details'; // 'details' or 'lineage'
+    let chartInstances = { health: null, training: null, competition: null };
+
+    // DOM Elements
+    const newHorseNameInput = document.getElementById('newHorseNameInput');
+    const addHorseButton = document.getElementById('addHorseButton');
+    const horseListEl = document.getElementById('horseList');
+    const noHorsesMessageEl = document.getElementById('noHorsesMessage');
+    const selectedHorseSectionEl = document.getElementById('selectedHorseSection');
+    const selectedHorseNameDisplayEl = document.getElementById('selectedHorseNameDisplay');
+    const noSelectedHorseMessageEl = document.getElementById('noSelectedHorseMessage');
+    const tabButtons = {
+        profile: document.getElementById('tabProfile'),
+        health: document.getElementById('tabHealth'),
+        training: document.getElementById('tabTraining'),
+        competition: document.getElementById('tabCompetition'),
+        breeding: document.getElementById('tabBreeding'), // New tab button
+    };
+    const contentViews = { 
+        profile: document.getElementById('profileView'),
+        health: document.getElementById('healthLogView'),
+        training: document.getElementById('trainingLogView'),
+        competition: document.getElementById('competitionLogView'),
+        breeding: document.getElementById('breedingLogView'), // New content view
+    };
+
+    // Profile Sub-Tab Elements
+    const subTabProfileDetailsBtn = document.getElementById('subTabProfileDetails');
+    const subTabProfileLineageBtn = document.getElementById('subTabProfileLineage');
+    const profileDetailsViewEl = document.getElementById('profileDetailsView');
+    const profileLineageViewEl = document.getElementById('profileLineageView');
+
+    // Profile Detail Elements
+    const profileDobInput = document.getElementById('profileDobInput');
+    const profileBreedSelect = document.getElementById('profileBreedSelect');
+    const profileSexSelect = document.getElementById('profileSexSelect');
+    const profileHeightInput = document.getElementById('profileHeightInput');
+    const saveProfileDetailsButton = document.getElementById('saveProfileDetailsButton'); // Renamed
+    const displayHorseName = document.getElementById('displayHorseName');
+    const displayBreed = document.getElementById('displayBreed');
+    const displaySex = document.getElementById('displaySex');
+    const displayDob = document.getElementById('displayDob');
+    const displayAge = document.getElementById('displayAge');
+    const displayHeight = document.getElementById('displayHeight');
+    const birthdayBannerEl = document.getElementById('birthdayBanner');
+
+    // Profile Lineage Elements
+    const profileSireNameInput = document.getElementById('profileSireNameInput');
+    const profileSireChampionInput = document.getElementById('profileSireChampionInput');
+    const profileDamNameInput = document.getElementById('profileDamNameInput');
+    const profileDamChampionInput = document.getElementById('profileDamChampionInput');
+    const saveProfileLineageButton = document.getElementById('saveProfileLineageButton');
+    const displaySireName = document.getElementById('displaySireName');
+    const displaySireChampion = document.getElementById('displaySireChampion');
+    const displayDamName = document.getElementById('displayDamName');
+    const displayDamChampion = document.getElementById('displayDamChampion');
+
+
+    const healthElements = {
+        dateInput: document.getElementById('healthLogDateInput'),
+        typeInput: document.getElementById('healthLogTypeInput'),
+        notesInput: document.getElementById('healthLogNotesInput'),
+        medicineNameInput: document.getElementById('healthMedicineNameInput'),
+        dosageInput: document.getElementById('healthDosageInput'),
+        treatmentDurationInput: document.getElementById('healthTreatmentDurationInput'),
+        addButton: document.getElementById('addHealthLogButton'),
+        listEl: document.getElementById('healthLogList'),
+        noLogsMessageEl: document.getElementById('noHealthLogsMessage'),
+    };
+
+    const trainingElements = {
+        dateInput: document.getElementById('trainingLogDateInput'),
+        activityInput: document.getElementById('trainingLogActivityInput'),
+        durationInput: document.getElementById('trainingLogDurationInput'),
+        notesInput: document.getElementById('trainingLogNotesInput'),
+        addButton: document.getElementById('addTrainingLogButton'),
+        listEl: document.getElementById('trainingLogList'),
+        noLogsMessageEl: document.getElementById('noTrainingLogsMessage'),
+        chartCanvas: document.getElementById('trainingChart'),
+        noChartDataMessageEl: document.getElementById('noTrainingChartDataMessage'),
+        exhaustionWarningEl: document.getElementById('exhaustionWarningMessage')
+    };
+
+    const competitionElements = {
+        dateInput: document.getElementById('compLogDateInput'),
+        eventInput: document.getElementById('compLogEventInput'),
+        classInput: document.getElementById('compLogClassInput'),
+        placingInput: document.getElementById('compLogPlacingInput'),
+        notesInput: document.getElementById('compLogNotesInput'),
+        addButton: document.getElementById('addCompetitionLogButton'),
+        listEl: document.getElementById('competitionLogList'),
+        noLogsMessageEl: document.getElementById('noCompetitionLogsMessage'),
+        chartCanvas: document.getElementById('competitionChart'),
+        noChartDataMessageEl: document.getElementById('noCompetitionChartDataMessage')
+    };
+
+    // Breeding Log Elements
+    const breedingElements = {
+        inseminationDateInput: document.getElementById('breedingInseminationDateInput'),
+        stallionInput: document.getElementById('breedingStallionInput'),
+        dueDateInput: document.getElementById('breedingDueDateInput'),
+        offspringNameInput: document.getElementById('breedingOffspringNameInput'),
+        notesInput: document.getElementById('breedingNotesInput'),
+        addButton: document.getElementById('addBreedingLogButton'),
+        listEl: document.getElementById('breedingLogList'),
+        noLogsMessageEl: document.getElementById('noBreedingLogsMessage'),
+    };
+    
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+    function generateId() { return '_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36); }
+    
+    function formatDateForDisplay(dateString) { 
+        if (!dateString) return '';
+        const options = { year: 'numeric', month: 'short', day: 'numeric' }; 
+        const dateParts = dateString.split('-');
+        return dateParts.length === 3 ? new Date(Date.UTC(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]))).toLocaleDateString(undefined, options) : new Date(dateString).toLocaleDateString(undefined, options);
+    }
+    function formatDateForList(dateString) {
+        if (!dateString) return '';
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        const dateParts = dateString.split('-');
+        return dateParts.length === 3 ? new Date(Date.UTC(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]))).toLocaleDateString(undefined, options) : new Date(dateString).toLocaleDateString(undefined, options);
+    }
+
+    function showAlert(message) { alert(message); }
+    function loadData(key, defaultValue = []) { return JSON.parse(localStorage.getItem(key)) || defaultValue; }
+    function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+
+    function renderHorses() {
+        horseListEl.innerHTML = '';
+        noHorsesMessageEl.classList.toggle('hidden', horses.length > 0);
+        horses.forEach(horse => {
+            const li = document.createElement('li');
+            li.className = `p-3 rounded-md border border-gray-300 transition duration-150 ease-in-out hover:bg-gray-200 cursor-pointer ${selectedHorseId === horse.id ? 'bg-blue-100 border-blue-500 ring-2 ring-blue-300 hover:bg-blue-100' : ''}`;
+            li.textContent = horse.name;
+            li.dataset.horseId = horse.id;
+            li.addEventListener('click', () => selectHorse(horse.id));
+            horseListEl.appendChild(li);
+        });
+    }
+    
+    function renderContentForSelectedHorse() {
+        const isHorseSelected = !!selectedHorseId;
+        selectedHorseSectionEl.classList.toggle('hidden', !isHorseSelected);
+        noSelectedHorseMessageEl.classList.toggle('hidden', isHorseSelected);
+        if (!isHorseSelected) return;
+        
+        const selectedHorse = horses.find(h => h.id === selectedHorseId);
+        selectedHorseNameDisplayEl.textContent = selectedHorse ? selectedHorse.name : '';
+        
+        if (currentLogView === 'profile') {
+            renderProfileView(selectedHorse);
+        } else {
+            renderSpecificLogList(currentLogView);
+        }
+        updateActiveTab();
+    }
+
+    function updateProfileSubTabView() {
+        profileDetailsViewEl.classList.toggle('hidden', currentProfileSubView !== 'details');
+        profileLineageViewEl.classList.toggle('hidden', currentProfileSubView !== 'lineage');
+        subTabProfileDetailsBtn.classList.toggle('active', currentProfileSubView === 'details');
+        subTabProfileLineageBtn.classList.toggle('active', currentProfileSubView === 'lineage');
+    }
+
+    function renderProfileView(horse) {
+        if (!horse) return;
+        // Details Sub-Tab
+        profileDobInput.value = horse.dob || '';
+        profileBreedSelect.value = horse.breed || '';
+        profileSexSelect.value = horse.sex || '';
+        profileHeightInput.value = horse.height || '';
+
+        displayHorseName.textContent = horse.name;
+        displayBreed.textContent = horse.breed || 'N/A';
+        displaySex.textContent = horse.sex || 'N/A';
+        displayDob.textContent = horse.dob ? formatDateForList(horse.dob) : 'N/A';
+        displayHeight.textContent = horse.height || 'N/A';
+
+        if (horse.dob) {
+            const today = new Date();
+            const birthDate = new Date(horse.dob);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            displayAge.textContent = age >= 0 ? `${age} years old` : 'N/A';
+
+            if (today.getMonth() === birthDate.getMonth() && today.getDate() === birthDate.getDate()) {
+                birthdayBannerEl.classList.remove('hidden');
+                birthdayBannerEl.textContent = `🎉 Happy Birthday, ${horse.name}! 🎉`;
+            } else {
+                birthdayBannerEl.classList.add('hidden');
+            }
+        } else {
+            displayAge.textContent = 'N/A';
+            birthdayBannerEl.classList.add('hidden');
+        }
+
+        // Lineage Sub-Tab
+        profileSireNameInput.value = horse.sireName || '';
+        profileSireChampionInput.checked = horse.sireChampion || false;
+        profileDamNameInput.value = horse.damName || '';
+        profileDamChampionInput.checked = horse.damChampion || false;
+
+        displaySireName.textContent = horse.sireName || 'N/A';
+        displaySireChampion.classList.toggle('hidden', !horse.sireChampion);
+        displayDamName.textContent = horse.damName || 'N/A';
+        displayDamChampion.classList.toggle('hidden', !horse.damChampion);
+
+        updateProfileSubTabView(); // Ensure correct sub-tab is shown
+    }
+
+
+    function renderSpecificLogList(viewType) {
+        let logsToRender, listEl, noLogsMessageEl, formInputs, chartCanvas, noChartMsgEl;
+        let allLogsForType;
+
+        const elementsMap = {
+            health: healthElements,
+            training: trainingElements,
+            competition: competitionElements,
+            breeding: breedingElements // Added breeding elements
+        };
+        const currentElements = elementsMap[viewType];
+        if (!currentElements) return;
+
+        listEl = currentElements.listEl;
+        noLogsMessageEl = currentElements.noLogsMessageEl;
+        formInputs = []; // Initialize as empty
+        
+        if (viewType === 'health') {
+            allLogsForType = healthLogs;
+            formInputs.push(currentElements.dateInput, currentElements.typeInput, currentElements.notesInput, currentElements.medicineNameInput, currentElements.dosageInput, currentElements.treatmentDurationInput);
+        } else if (viewType === 'training') {
+            allLogsForType = trainingLogs;
+            formInputs.push(currentElements.dateInput, currentElements.activityInput, currentElements.durationInput, currentElements.notesInput);
+        } else if (viewType === 'competition') {
+            allLogsForType = competitionLogs;
+            formInputs.push(currentElements.dateInput, currentElements.eventInput, currentElements.classInput, currentElements.placingInput, currentElements.notesInput);
+        } else if (viewType === 'breeding') {
+            allLogsForType = breedingLogs;
+            formInputs.push(currentElements.inseminationDateInput, currentElements.stallionInput, currentElements.dueDateInput, currentElements.offspringNameInput, currentElements.notesInput);
+        }
+        
+        chartCanvas = currentElements.chartCanvas; 
+        noChartMsgEl = currentElements.noChartDataMessageEl; 
+        
+        logsToRender = allLogsForType.filter(log => log.horseId === selectedHorseId);
+        listEl.innerHTML = ''; 
+        logsToRender.sort((a, b) => new Date(b.date || b.inseminationDate) - new Date(a.date || a.inseminationDate)); // Use inseminationDate for breeding
+
+        noLogsMessageEl.classList.toggle('hidden', logsToRender.length > 0);
+        logsToRender.forEach(log => {
+            const li = document.createElement('li');
+            li.className = 'p-3 bg-gray-100 rounded-md border';
+            let content = '';
+            if (viewType === 'health') {
+                content += `<p class="font-semibold"><span class="date">${formatDateForList(log.date)}</span> - <span class="type">${log.type}</span></p>`;
+                if (log.medicineName) {
+                    content += `<div class="treatment-details text-sm">
+                                    <p><strong>Medicine:</strong> ${log.medicineName}</p>
+                                    <p><strong>Dosage:</strong> ${log.dosage || 'N/A'}</p>`;
+                    if (log.treatmentDurationDays) {
+                        const duration = parseInt(log.treatmentDurationDays);
+                        const administeredCount = log.administrationDates ? log.administrationDates.length : 0;
+                        content += `<p><strong>Progress:</strong> ${administeredCount} of ${duration} doses administered.</p>`;
+                        if (log.administrationDates && log.administrationDates.length > 0) {
+                            content += `<p class="mt-1"><strong>Doses Administered (Sign-offs):</strong></p><div class="flex flex-wrap gap-1 mt-1">`;
+                            log.administrationDates.forEach(adminDate => {
+                                content += `<span class="administration-dates-list"><li>${formatDateForList(adminDate)}</li></span>`;
+                            });
+                            content += `</div>`;
+                        }
+                        if (administeredCount < duration) {
+                            content += `<button data-log-id="${log.id}" class="administer-dose-button">Sign-off: Administer Dose Today</button>`;
+                        } else {
+                            content += `<p class="treatment-complete mt-1">Treatment Complete!</p>`;
+                        }
+                    }
+                    content += `</div>`;
+                }
+            } else if (viewType === 'training') {
+                content += `<p class="font-semibold"><span class="date">${formatDateForList(log.date)}</span> - <span class="activity">${log.activity}</span> (<span class="duration">${log.duration || 'N/A'} mins</span>)</p>`;
+            } else if (viewType === 'competition') {
+                content += `<p class="font-semibold"><span class="date">${formatDateForList(log.date)}</span> - <span class="event-name">${log.eventName}</span></p>
+                            <p class="text-sm">Class: <span class="class-level">${log.classLevel || ''}</span> | Result: <span class="placing">${log.placing || ''}</span></p>`;
+            } else if (viewType === 'breeding') {
+                content += `<p class="font-semibold">Insemination: <span class="date">${formatDateForList(log.inseminationDate)}</span></p>
+                            <p class="text-sm"><strong>Stallion:</strong> ${log.stallionUsed || 'N/A'}</p>
+                            <p class="text-sm"><strong>Due Date:</strong> ${log.dueDate ? formatDateForList(log.dueDate) : 'N/A'}</p>
+                            <p class="text-sm"><strong>Offspring:</strong> ${log.offspringName || 'Not yet recorded'}</p>`;
+            }
+            content += `<p class="text-sm text-gray-600 whitespace-pre-wrap notes mt-1">${log.notes || ''}</p>`;
+            li.innerHTML = content;
+
+            if (viewType === 'health' && log.medicineName && log.treatmentDurationDays) {
+                const administeredCount = log.administrationDates ? log.administrationDates.length : 0;
+                if (administeredCount < parseInt(log.treatmentDurationDays)) {
+                    const adminButton = li.querySelector('.administer-dose-button');
+                    if (adminButton) {
+                        adminButton.addEventListener('click', () => administerDose(adminButton.dataset.logId));
+                    }
+                }
+            }
+            listEl.appendChild(li);
+        });
+        
+        const today = new Date().toISOString().slice(0,10);
+        formInputs.forEach(input => {
+            if(input) { 
+                if (input.type === 'date') input.value = today;
+                else if (input.type === 'number') input.value = '';
+                else input.value = '';
+            }
+        });
+
+        if (viewType !== 'health' && viewType !== 'breeding' && chartCanvas && noChartMsgEl) { 
+             renderChart(viewType, logsToRender, chartCanvas, noChartMsgEl);
+        } else { // Hide charts for health and breeding, or if elements don't exist
+            if(chartCanvas) chartCanvas.classList.add('hidden');
+            if(noChartMsgEl) noChartMsgEl.classList.add('hidden');
+        }
+
+        if (viewType === 'training') {
+            checkExhaustionWarning(logsToRender);
+        } else {
+            if (trainingElements.exhaustionWarningEl) trainingElements.exhaustionWarningEl.classList.add('hidden'); 
+        }
+    }
+
+    function administerDose(logId) {
+        const logIndex = healthLogs.findIndex(log => log.id === logId);
+        if (logIndex > -1) {
+            const log = healthLogs[logIndex];
+            if (!log.administrationDates) {
+                log.administrationDates = [];
+            }
+            const todayStr = new Date().toISOString().slice(0,10);
+            if (log.administrationDates.length < parseInt(log.treatmentDurationDays)) {
+                log.administrationDates.push(todayStr); 
+                saveData('mvpHorseData_healthLogs', healthLogs);
+                renderSpecificLogList('health');
+            } else {
+                showAlert('Treatment already complete.');
+            }
+        }
+    }
+
+    function checkExhaustionWarning(currentHorseTrainingLogs) {
+        const LONG_SESSION_DURATION = 60; 
+        const WARNING_SESSION_COUNT = 3;
+        const WARNING_DAYS_WINDOW = 7;
+        trainingElements.exhaustionWarningEl.classList.add('hidden'); 
+
+        if (currentHorseTrainingLogs.length < WARNING_SESSION_COUNT) return;
+        
+        const sortedLogs = [...currentHorseTrainingLogs].sort((a, b) => new Date(a.date) - new Date(b.date));
+        for (let i = 0; i <= sortedLogs.length - WARNING_SESSION_COUNT; i++) {
+            const windowLogs = sortedLogs.slice(i, i + WARNING_SESSION_COUNT);
+            const longSessionsInWindow = windowLogs.filter(log => parseInt(log.duration) > LONG_SESSION_DURATION);
+            if (longSessionsInWindow.length >= WARNING_SESSION_COUNT) {
+                const firstDate = new Date(windowLogs[0].date);
+                const lastDate = new Date(windowLogs[windowLogs.length - 1].date);
+                const diffTime = Math.abs(lastDate - firstDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays <= WARNING_DAYS_WINDOW) {
+                    trainingElements.exhaustionWarningEl.textContent = `⚠️ Exhaustion Warning: ${longSessionsInWindow.length} long sessions (> ${LONG_SESSION_DURATION} mins) within ${diffDays + 1} days. Consider rest.`;
+                    trainingElements.exhaustionWarningEl.classList.remove('hidden');
+                    return; 
+                }
+            }
+        }
+    }
+
+    function renderChart(viewType, logs, canvasEl, noDataMsgEl) {
+        if (chartInstances[viewType]) {
+            chartInstances[viewType].destroy();
+            chartInstances[viewType] = null;
+        }
+        
+        if (!logs || logs.length === 0) {
+            if(canvasEl) canvasEl.classList.add('hidden');
+            if(noDataMsgEl) { noDataMsgEl.classList.remove('hidden'); noDataMsgEl.textContent = 'Not enough data to display chart.'; }
+            return;
+        }
+        if(canvasEl) canvasEl.classList.remove('hidden');
+        if(noDataMsgEl) noDataMsgEl.classList.add('hidden');
+        
+        let chartConfig;
+        if (viewType === 'training') {
+            const sortedLogsForChart = [...logs].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const chartLabels = sortedLogsForChart.map(log => formatDateForDisplay(log.date));
+            const chartDataValues = sortedLogsForChart.map(log => parseInt(log.duration) || 0);
+            if (chartDataValues.every(val => val === 0) && chartLabels.length > 0) {
+                if(canvasEl) canvasEl.classList.add('hidden');
+                if(noDataMsgEl) { noDataMsgEl.classList.remove('hidden'); noDataMsgEl.textContent = 'No valid training durations to display chart.';}
+                return;
+            }
+            chartConfig = {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{ label: 'Session Duration (mins)', data: chartDataValues, borderColor: 'rgba(234, 88, 12, 1)', backgroundColor: 'rgba(234, 88, 12, 0.2)', tension: 0.1, fill: true }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: 'Duration (mins)' } } }, plugins: { legend: { display: true, position: 'top' }, title: { display: true, text: 'Training Session Durations Over Time' }}}
+            };
+        } else { // Competition: Entries per month (bar chart) - Health & Breeding charts removed from this generic function
+            if (viewType === 'health' || viewType === 'breeding') { 
+                 if(canvasEl) canvasEl.classList.add('hidden');
+                 if(noDataMsgEl) noDataMsgEl.classList.add('hidden'); 
+                return;
+            }
+            const monthlyCounts = {};
+            logs.forEach(log => {
+                const monthYear = log.date.substring(0, 7);
+                monthlyCounts[monthYear] = (monthlyCounts[monthYear] || 0) + 1;
+            });
+            const sortedMonths = Object.keys(monthlyCounts).sort();
+            const chartLabels = sortedMonths.map(my => new Date(Date.UTC(my.split('-')[0], my.split('-')[1] - 1, 1)).toLocaleString('default', { month: 'short', year: 'numeric' }));
+            const chartDataValues = sortedMonths.map(my => monthlyCounts[my]);
+            if (chartLabels.length === 0) {
+                if(canvasEl) canvasEl.classList.add('hidden');
+                if(noDataMsgEl) { noDataMsgEl.classList.remove('hidden'); noDataMsgEl.textContent = 'Not enough data to display chart.'; }
+                return;
+            }
+            const titleText = `${viewType.charAt(0).toUpperCase() + viewType.slice(1)} Log Entries per Month`;
+            const datasetLabelText = `Number of ${viewType.charAt(0).toUpperCase() + viewType.slice(1)} Entries`;
+            chartConfig = {
+                type: 'bar',
+                data: { labels: chartLabels, datasets: [{ label: datasetLabelText, data: chartDataValues, backgroundColor: 'rgba(59, 130, 246, 0.5)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }}}, plugins: { legend: { display: true, position: 'top' }, title: { display: true, text: titleText }}}
+            };
+        }
+        if (canvasEl) { 
+            const ctx = canvasEl.getContext('2d');
+            chartInstances[viewType] = new Chart(ctx, chartConfig);
+        }
+    }
+
+    function updateActiveTab() {
+        Object.values(tabButtons).forEach(button => button.classList.remove('active'));
+        Object.values(contentViews).forEach(view => view.classList.add('hidden')); 
+        if (tabButtons[currentLogView]) tabButtons[currentLogView].classList.add('active');
+        if (contentViews[currentLogView]) contentViews[currentLogView].classList.remove('hidden'); 
+    }
+
+    function addHorseHandler() {
+        const name = newHorseNameInput.value.trim();
+        if (!name) { showAlert('Please enter a horse name.'); return; }
+        horses.push({ 
+            id: generateId(), name: name, dob: '', breed: '', sex: '', height: '',
+            sireName: '', sireChampion: false, damName: '', damChampion: false // Initialize lineage fields
+        });
+        saveData('mvpHorseData_horses', horses);
+        newHorseNameInput.value = '';
+        renderHorses();
+        if (horses.length === 1) selectHorse(horses[0].id);
+    }
+
+    function selectHorse(horseId) {
+        selectedHorseId = horseId;
+        currentLogView = 'profile'; 
+        currentProfileSubView = 'details'; // Default to details sub-tab
+        renderHorses();
+        renderContentForSelectedHorse(); 
+    }
+    
+    function saveHorseProfileDetailsHandler() {
+        if (!selectedHorseId) { showAlert('No horse selected.'); return; }
+        const horseIndex = horses.findIndex(h => h.id === selectedHorseId);
+        if (horseIndex > -1) {
+            horses[horseIndex].dob = profileDobInput.value;
+            horses[horseIndex].breed = profileBreedSelect.value;
+            horses[horseIndex].sex = profileSexSelect.value;
+            horses[horseIndex].height = profileHeightInput.value.trim();
+            saveData('mvpHorseData_horses', horses);
+            showAlert('Profile details saved successfully!');
+            renderProfileView(horses[horseIndex]); 
+        }
+    }
+    function saveHorseProfileLineageHandler() {
+        if (!selectedHorseId) { showAlert('No horse selected.'); return; }
+        const horseIndex = horses.findIndex(h => h.id === selectedHorseId);
+        if (horseIndex > -1) {
+            horses[horseIndex].sireName = profileSireNameInput.value.trim();
+            horses[horseIndex].sireChampion = profileSireChampionInput.checked;
+            horses[horseIndex].damName = profileDamNameInput.value.trim();
+            horses[horseIndex].damChampion = profileDamChampionInput.checked;
+            saveData('mvpHorseData_horses', horses);
+            showAlert('Lineage information saved successfully!');
+            renderProfileView(horses[horseIndex]);
+        }
+    }
+
+    function addLogEntryHandler(logType, data, requiredFields, logArray, storageKey) {
+        if (!selectedHorseId) { showAlert('Please select a horse first.'); return; }
+        for (const field of requiredFields) {
+            if (logType === 'training' && field === 'duration') {
+                 const durationVal = parseFloat(data[field]);
+                 if (isNaN(durationVal) || durationVal <=0) { showAlert(`Please enter a valid positive number for duration.`); return; }
+                 data[field] = durationVal; 
+            } else if (!data[field] || (typeof data[field] === 'string' && !data[field].trim())) {
+                showAlert(`Please fill in all required fields for the ${logType} log.`); return;
+            }
+        }
+        
+        if (logType === 'health') {
+            if (data.treatmentDurationDays) {
+                const duration = parseInt(data.treatmentDurationDays);
+                if (isNaN(duration) || duration < 1) {
+                    showAlert('Treatment duration must be a positive number of days.'); 
+                    data.treatmentDurationDays = ''; 
+                    return;
+                }
+                data.treatmentDurationDays = duration;
+                data.administrationDates = []; 
+            } else { 
+                delete data.treatmentDurationDays;
+                delete data.administrationDates; 
+            }
+        } else if (logType === 'breeding') {
+            // Basic validation for breeding dates if needed
+            if (data.dueDate && data.inseminationDate && new Date(data.dueDate) < new Date(data.inseminationDate)) {
+                showAlert('Due date cannot be before insemination date.');
+                return;
+            }
+        }
+
+
+        const entry = { id: generateId(), horseId: selectedHorseId, ...data };
+        for (const key in entry) { 
+            if (typeof entry[key] === 'string' && key !== 'duration') entry[key] = entry[key].trim();
+        }
+        logArray.push(entry);
+        saveData(storageKey, logArray);
+        renderSpecificLogList(currentLogView); 
+    }
+
+    function init() {
+        horses = loadData('mvpHorseData_horses');
+        healthLogs = loadData('mvpHorseData_healthLogs');
+        trainingLogs = loadData('mvpHorseData_trainingLogs');
+        competitionLogs = loadData('mvpHorseData_competitionLogs');
+        breedingLogs = loadData('mvpHorseData_breedingLogs'); // Load breeding logs
+        
+        currentLogView = 'profile'; 
+        currentProfileSubView = 'details';
+
+
+        renderHorses();
+        renderContentForSelectedHorse(); 
+
+        addHorseButton.addEventListener('click', addHorseHandler);
+        newHorseNameInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') addHorseHandler(); });
+
+        Object.values(tabButtons).forEach(button => {
+            button.addEventListener('click', () => { 
+                currentLogView = button.dataset.view; 
+                if (currentLogView === 'profile') currentProfileSubView = 'details'; // Reset to details on profile tab click
+                renderContentForSelectedHorse(); 
+            });
+        });
+        
+        subTabProfileDetailsBtn.addEventListener('click', () => {
+            currentProfileSubView = 'details';
+            updateProfileSubTabView();
+        });
+        subTabProfileLineageBtn.addEventListener('click', () => {
+            currentProfileSubView = 'lineage';
+            updateProfileSubTabView();
+        });
+
+        saveProfileDetailsButton.addEventListener('click', saveHorseProfileDetailsHandler);
+        saveProfileLineageButton.addEventListener('click', saveHorseProfileLineageHandler);
+
+
+        healthElements.addButton.addEventListener('click', () => {
+            addLogEntryHandler('health', 
+                { 
+                    date: healthElements.dateInput.value, 
+                    type: healthElements.typeInput.value, 
+                    notes: healthElements.notesInput.value,
+                    medicineName: healthElements.medicineNameInput.value,
+                    dosage: healthElements.dosageInput.value,
+                    treatmentDurationDays: healthElements.treatmentDurationInput.value 
+                },
+                ['date', 'type'], healthLogs, 'mvpHorseData_healthLogs'
+            );
+        });
+        trainingElements.addButton.addEventListener('click', () => {
+            addLogEntryHandler('training',
+                { date: trainingElements.dateInput.value, activity: trainingElements.activityInput.value, duration: trainingElements.durationInput.value, notes: trainingElements.notesInput.value },
+                ['date', 'activity', 'duration'], trainingLogs, 'mvpHorseData_trainingLogs'
+            );
+        });
+        competitionElements.addButton.addEventListener('click', () => {
+            addLogEntryHandler('competition',
+                { date: competitionElements.dateInput.value, eventName: competitionElements.eventInput.value, classLevel: competitionElements.classInput.value, placing: competitionElements.placingInput.value, notes: competitionElements.notesInput.value },
+                ['date', 'eventName'], competitionLogs, 'mvpHorseData_competitionLogs'
+            );
+        });
+        breedingElements.addButton.addEventListener('click', () => {
+            addLogEntryHandler('breeding',
+                { 
+                    inseminationDate: breedingElements.inseminationDateInput.value, 
+                    stallionUsed: breedingElements.stallionInput.value, 
+                    dueDate: breedingElements.dueDateInput.value, 
+                    offspringName: breedingElements.offspringNameInput.value, 
+                    notes: breedingElements.notesInput.value 
+                },
+                ['inseminationDate', 'stallionUsed'], breedingLogs, 'mvpHorseData_breedingLogs'
+            );
+        });
+        
+        const today = new Date().toISOString().slice(0,10);
+        [healthElements.dateInput, trainingElements.dateInput, competitionElements.dateInput, profileDobInput, breedingElements.inseminationDateInput, breedingElements.dueDateInput].forEach(input => {
+            if(input && input.type === 'date') input.value = today; 
+        });
+         if(profileDobInput) profileDobInput.value = ''; 
+    }
+    init();
+});
+</script>
+</body>
+</html>

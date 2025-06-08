@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head> 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Horse Log MVP (Vanilla JS)</title>
@@ -114,6 +114,11 @@
             font-weight: 600; /* font-semibold */
             margin-left: 0.5rem; /* ml-2 */
         }
+        .log-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.25rem 1rem;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-4 sm:p-6 md:p-8">
@@ -225,9 +230,19 @@
                             <h3 class="text-xl font-semibold text-gray-700 mb-4">Training Sessions</h3>
                             <div class="space-y-3 mb-6">
                                 <div><label for="trainingLogDateInput" class="block text-sm font-medium text-gray-700">Date:</label><input type="date" id="trainingLogDateInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
-                                <div><label for="trainingLogActivityInput" class="block text-sm font-medium text-gray-700">Activity:</label><input type="text" id="trainingLogActivityInput" placeholder="e.g., Flatwork, Jumping" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
-                                <div><label for="trainingLogDurationInput" class="block text-sm font-medium text-gray-700">Duration (mins):</label><input type="number" id="trainingLogDurationInput" placeholder="e.g., 60" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
-                                <div><label for="trainingLogNotesInput" class="block text-sm font-medium text-gray-700">Notes:</label><textarea id="trainingLogNotesInput" rows="3" placeholder="Details..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></textarea></div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div><label for="trainingLogActivityInput" class="block text-sm font-medium text-gray-700">Activity:</label><input type="text" id="trainingLogActivityInput" placeholder="e.g., Flatwork, Jumping" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                    <div><label for="trainingLogDurationInput" class="block text-sm font-medium text-gray-700">Duration (mins):</label><input type="number" id="trainingLogDurationInput" placeholder="e.g., 60" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></div>
+                                </div>
+                                <div><label for="horseBehaviorInput" class="block text-sm font-medium text-gray-700">Horse Behavior:</label><textarea id="horseBehaviorInput" rows="2" placeholder="e.g., Calm, forward, spooky..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></textarea></div>
+                                <div><label for="bodyLanguageInput" class="block text-sm font-medium text-gray-700">Body Language:</label><textarea id="bodyLanguageInput" rows="2" placeholder="e.g., Soft ears, tense back..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"></textarea></div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div><label for="trainingLocationSelect" class="block text-sm font-medium text-gray-700">Location:</label><select id="trainingLocationSelect" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"><option value="Inside">Inside</option><option value="Outside">Outside</option></select></div>
+                                    <div class="flex items-end space-x-4 pb-2">
+                                        <div class="flex items-center"><input type="checkbox" id="withTrainerInput" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"><label for="withTrainerInput" class="ml-2 block text-sm text-gray-900">With Trainer?</label></div>
+                                        <div class="flex items-center"><input type="checkbox" id="newTackInput" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"><label for="newTackInput" class="ml-2 block text-sm text-gray-900">New Tack Used?</label></div>
+                                    </div>
+                                </div>
                                 <button id="addTrainingLogButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md">Add Training Entry</button>
                             </div>
                             <h4 class="text-md font-medium text-gray-700 mb-2">Recorded Training Sessions:</h4>
@@ -299,10 +314,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let healthLogs = [];
     let trainingLogs = [];
     let competitionLogs = [];
-    let breedingLogs = []; // New state for breeding logs
+    let breedingLogs = [];
     let selectedHorseId = null;
-    let currentLogView = 'profile'; // Default to profile view
-    let currentProfileSubView = 'details'; // 'details' or 'lineage'
+    let currentLogView = 'profile'; 
+    let currentProfileSubView = 'details'; 
     let chartInstances = { health: null, training: null, competition: null };
 
     // DOM Elements
@@ -318,14 +333,14 @@ document.addEventListener('DOMContentLoaded', () => {
         health: document.getElementById('tabHealth'),
         training: document.getElementById('tabTraining'),
         competition: document.getElementById('tabCompetition'),
-        breeding: document.getElementById('tabBreeding'), // New tab button
+        breeding: document.getElementById('tabBreeding'),
     };
     const contentViews = { 
         profile: document.getElementById('profileView'),
         health: document.getElementById('healthLogView'),
         training: document.getElementById('trainingLogView'),
         competition: document.getElementById('competitionLogView'),
-        breeding: document.getElementById('breedingLogView'), // New content view
+        breeding: document.getElementById('breedingLogView'),
     };
 
     // Profile Sub-Tab Elements
@@ -339,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const profileBreedSelect = document.getElementById('profileBreedSelect');
     const profileSexSelect = document.getElementById('profileSexSelect');
     const profileHeightInput = document.getElementById('profileHeightInput');
-    const saveProfileDetailsButton = document.getElementById('saveProfileDetailsButton'); // Renamed
+    const saveProfileDetailsButton = document.getElementById('saveProfileDetailsButton');
     const displayHorseName = document.getElementById('displayHorseName');
     const displayBreed = document.getElementById('displayBreed');
     const displaySex = document.getElementById('displaySex');
@@ -358,7 +373,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const displaySireChampion = document.getElementById('displaySireChampion');
     const displayDamName = document.getElementById('displayDamName');
     const displayDamChampion = document.getElementById('displayDamChampion');
-
 
     const healthElements = {
         dateInput: document.getElementById('healthLogDateInput'),
@@ -382,7 +396,13 @@ document.addEventListener('DOMContentLoaded', () => {
         noLogsMessageEl: document.getElementById('noTrainingLogsMessage'),
         chartCanvas: document.getElementById('trainingChart'),
         noChartDataMessageEl: document.getElementById('noTrainingChartDataMessage'),
-        exhaustionWarningEl: document.getElementById('exhaustionWarningMessage')
+        exhaustionWarningEl: document.getElementById('exhaustionWarningMessage'),
+        // New Training Log Inputs
+        behaviorInput: document.getElementById('horseBehaviorInput'),
+        bodyLanguageInput: document.getElementById('bodyLanguageInput'),
+        locationSelect: document.getElementById('trainingLocationSelect'),
+        withTrainerInput: document.getElementById('withTrainerInput'),
+        newTackInput: document.getElementById('newTackInput'),
     };
 
     const competitionElements = {
@@ -398,7 +418,6 @@ document.addEventListener('DOMContentLoaded', () => {
         noChartDataMessageEl: document.getElementById('noCompetitionChartDataMessage')
     };
 
-    // Breeding Log Elements
     const breedingElements = {
         inseminationDateInput: document.getElementById('breedingInseminationDateInput'),
         stallionInput: document.getElementById('breedingStallionInput'),
@@ -514,9 +533,8 @@ document.addEventListener('DOMContentLoaded', () => {
         displayDamName.textContent = horse.damName || 'N/A';
         displayDamChampion.classList.toggle('hidden', !horse.damChampion);
 
-        updateProfileSubTabView(); // Ensure correct sub-tab is shown
+        updateProfileSubTabView();
     }
-
 
     function renderSpecificLogList(viewType) {
         let logsToRender, listEl, noLogsMessageEl, formInputs, chartCanvas, noChartMsgEl;
@@ -526,21 +544,21 @@ document.addEventListener('DOMContentLoaded', () => {
             health: healthElements,
             training: trainingElements,
             competition: competitionElements,
-            breeding: breedingElements // Added breeding elements
+            breeding: breedingElements
         };
         const currentElements = elementsMap[viewType];
         if (!currentElements) return;
 
         listEl = currentElements.listEl;
         noLogsMessageEl = currentElements.noLogsMessageEl;
-        formInputs = []; // Initialize as empty
+        formInputs = [];
         
         if (viewType === 'health') {
             allLogsForType = healthLogs;
             formInputs.push(currentElements.dateInput, currentElements.typeInput, currentElements.notesInput, currentElements.medicineNameInput, currentElements.dosageInput, currentElements.treatmentDurationInput);
         } else if (viewType === 'training') {
             allLogsForType = trainingLogs;
-            formInputs.push(currentElements.dateInput, currentElements.activityInput, currentElements.durationInput, currentElements.notesInput);
+            formInputs.push(currentElements.dateInput, currentElements.activityInput, currentElements.durationInput, currentElements.notesInput, currentElements.behaviorInput, currentElements.bodyLanguageInput, currentElements.locationSelect, currentElements.withTrainerInput, currentElements.newTackInput);
         } else if (viewType === 'competition') {
             allLogsForType = competitionLogs;
             formInputs.push(currentElements.dateInput, currentElements.eventInput, currentElements.classInput, currentElements.placingInput, currentElements.notesInput);
@@ -554,7 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         logsToRender = allLogsForType.filter(log => log.horseId === selectedHorseId);
         listEl.innerHTML = ''; 
-        logsToRender.sort((a, b) => new Date(b.date || b.inseminationDate) - new Date(a.date || a.inseminationDate)); // Use inseminationDate for breeding
+        logsToRender.sort((a, b) => new Date(b.date || b.inseminationDate) - new Date(a.date || a.inseminationDate)); 
 
         noLogsMessageEl.classList.toggle('hidden', logsToRender.length > 0);
         logsToRender.forEach(log => {
@@ -587,7 +605,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     content += `</div>`;
                 }
             } else if (viewType === 'training') {
-                content += `<p class="font-semibold"><span class="date">${formatDateForList(log.date)}</span> - <span class="activity">${log.activity}</span> (<span class="duration">${log.duration || 'N/A'} mins</span>)</p>`;
+                content += `<p class="font-semibold"><span class="date">${formatDateForList(log.date)}</span> - <span class="activity">${log.activity}</span> (<span class="duration">${log.duration || 'N/A'} mins</span>)</p>
+                            <div class="text-sm text-gray-600 mt-2 space-y-1">
+                                <p><strong>Behavior:</strong> ${log.behavior || 'N/A'}</p>
+                                <p><strong>Body Language:</strong> ${log.bodyLanguage || 'N/A'}</p>
+                                <div class="log-details-grid">
+                                    <p><strong>Location:</strong> ${log.location}</p>
+                                    <p><strong>With Trainer:</strong> ${log.withTrainer ? 'Yes' : 'No'}</p>
+                                    <p><strong>New Tack:</strong> ${log.newTack ? 'Yes' : 'No'}</p>
+                                </div>
+                            </div>`;
             } else if (viewType === 'competition') {
                 content += `<p class="font-semibold"><span class="date">${formatDateForList(log.date)}</span> - <span class="event-name">${log.eventName}</span></p>
                             <p class="text-sm">Class: <span class="class-level">${log.classLevel || ''}</span> | Result: <span class="placing">${log.placing || ''}</span></p>`;
@@ -616,14 +643,15 @@ document.addEventListener('DOMContentLoaded', () => {
         formInputs.forEach(input => {
             if(input) { 
                 if (input.type === 'date') input.value = today;
-                else if (input.type === 'number') input.value = '';
-                else input.value = '';
+                else if (input.type === 'number' || input.type === 'text' || input.nodeName.toLowerCase() === 'textarea') input.value = '';
+                else if (input.type === 'select-one') input.selectedIndex = 0;
+                else if (input.type === 'checkbox') input.checked = false;
             }
         });
 
         if (viewType !== 'health' && viewType !== 'breeding' && chartCanvas && noChartMsgEl) { 
              renderChart(viewType, logsToRender, chartCanvas, noChartMsgEl);
-        } else { // Hide charts for health and breeding, or if elements don't exist
+        } else {
             if(chartCanvas) chartCanvas.classList.add('hidden');
             if(noChartMsgEl) noChartMsgEl.classList.add('hidden');
         }
@@ -711,7 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: 'Duration (mins)' } } }, plugins: { legend: { display: true, position: 'top' }, title: { display: true, text: 'Training Session Durations Over Time' }}}
             };
-        } else { // Competition: Entries per month (bar chart) - Health & Breeding charts removed from this generic function
+        } else { 
             if (viewType === 'health' || viewType === 'breeding') { 
                  if(canvasEl) canvasEl.classList.add('hidden');
                  if(noDataMsgEl) noDataMsgEl.classList.add('hidden'); 
@@ -756,7 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!name) { showAlert('Please enter a horse name.'); return; }
         horses.push({ 
             id: generateId(), name: name, dob: '', breed: '', sex: '', height: '',
-            sireName: '', sireChampion: false, damName: '', damChampion: false // Initialize lineage fields
+            sireName: '', sireChampion: false, damName: '', damChampion: false
         });
         saveData('mvpHorseData_horses', horses);
         newHorseNameInput.value = '';
@@ -767,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function selectHorse(horseId) {
         selectedHorseId = horseId;
         currentLogView = 'profile'; 
-        currentProfileSubView = 'details'; // Default to details sub-tab
+        currentProfileSubView = 'details'; 
         renderHorses();
         renderContentForSelectedHorse(); 
     }
@@ -826,7 +854,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete data.administrationDates; 
             }
         } else if (logType === 'breeding') {
-            // Basic validation for breeding dates if needed
             if (data.dueDate && data.inseminationDate && new Date(data.dueDate) < new Date(data.inseminationDate)) {
                 showAlert('Due date cannot be before insemination date.');
                 return;
@@ -848,7 +875,7 @@ document.addEventListener('DOMContentLoaded', () => {
         healthLogs = loadData('mvpHorseData_healthLogs');
         trainingLogs = loadData('mvpHorseData_trainingLogs');
         competitionLogs = loadData('mvpHorseData_competitionLogs');
-        breedingLogs = loadData('mvpHorseData_breedingLogs'); // Load breeding logs
+        breedingLogs = loadData('mvpHorseData_breedingLogs');
         
         currentLogView = 'profile'; 
         currentProfileSubView = 'details';
@@ -863,7 +890,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(tabButtons).forEach(button => {
             button.addEventListener('click', () => { 
                 currentLogView = button.dataset.view; 
-                if (currentLogView === 'profile') currentProfileSubView = 'details'; // Reset to details on profile tab click
+                if (currentLogView === 'profile') currentProfileSubView = 'details';
                 renderContentForSelectedHorse(); 
             });
         });
@@ -896,7 +923,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         trainingElements.addButton.addEventListener('click', () => {
             addLogEntryHandler('training',
-                { date: trainingElements.dateInput.value, activity: trainingElements.activityInput.value, duration: trainingElements.durationInput.value, notes: trainingElements.notesInput.value },
+                { 
+                    date: trainingElements.dateInput.value, 
+                    activity: trainingElements.activityInput.value, 
+                    duration: trainingElements.durationInput.value, 
+                    notes: trainingElements.notesInput.value,
+                    behavior: trainingElements.behaviorInput.value,
+                    bodyLanguage: trainingElements.bodyLanguageInput.value,
+                    location: trainingElements.locationSelect.value,
+                    withTrainer: trainingElements.withTrainerInput.checked,
+                    newTack: trainingElements.newTackInput.checked
+                },
                 ['date', 'activity', 'duration'], trainingLogs, 'mvpHorseData_trainingLogs'
             );
         });
